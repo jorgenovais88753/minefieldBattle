@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Campo Minado Multiplayer Customizado</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #222645, #3d358f 80%);
+      min-height: 100vh;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 30px 0 0 0;
+      overflow-x: hidden;
+    }
+    h1 {
+      margin-bottom: 10px;
+      color: #ffd700;
+      text-shadow: 2px 2px 7px #0b1235;
+      letter-spacing: 2px;
+      font-size: 2.1em;
+    }
+    #setup, #customPrompt {
+      margin-bottom: 20px;
+      background: #23233a;
+      padding: 22px 30px;
+      border-radius: 18px;
+      box-shadow: 0 2px 18px #0003;
+      text-align: center;
+    }
+    #setup label, #setup input, #setup select {
+      font-size: 1.07em;
+      margin: 0 3px;
+      color: #ffd700;
+    }
+    #setup input[type="number"] {
+      width: 42px;
+      border-radius: 6px;
+      padding: 2px 6px;
+      border: none;
+    }
+    #setup input[type="text"] {
+      width: 100px;
+      border-radius: 6px;
+      padding: 2px 6px;
+      border: none;
+    }
+    #setup button {
+      margin-left: 12px;
+      padding: 7px 22px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(90deg,#ff6b00,#ffd700 80%);
+      color: #23233a;
+      font-weight: bold;
+      font-size: 1em;
+      box-shadow: 0 2px 10px #0003;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .scoreboard {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 8px;
+      font-size: 1.09em;
+      letter-spacing: 1px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    .player {
+      min-width: 148px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: #23233a;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #0002;
+      transition: background 0.4s, color 0.4s;
+      margin-bottom: 4px;
+      position: relative;
+      display:inline-block;
+    }
+    .active-player {
+      background: linear-gradient(90deg, #ff6b00 40%, #ffd700 100%);
+      color: #23233a;
+      box-shadow: 0 4px 15px #ff6b0040;
+      outline: 2.5px solid #ffd700b5;
+      z-index: 2;
+    }
+    .item {
+      display: inline-block;
+      margin-left: 7px;
+      color: #00ffc1;
+      font-size: 1em;
+      font-weight: bold;
+      background: #1e3e3a80;
+      padding: 0 7px 1.5px 7px;
+      border-radius: 8px;
+      box-shadow: 0 1px 8px #00ffc155;
+      vertical-align: middle;
+      position: relative;
+    }
+    .item .icon {
+      font-size: 1.1em;
+      margin-right: 1px;
+      vertical-align: middle;
+      filter: drop-shadow(0 0 2px #00ffc1bb);
+    }
+    .mines {
+      margin-bottom: 12px;
+      font-size: 1.15em;
+      letter-spacing: 2px;
+    }
+    .controls {
+      margin-bottom: 14px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls label {
+      font-size: 1.03em;
+      margin-left: 3px;
+      cursor: pointer;
+      user-select: none;
+      color: #ffd700;
+      transition: color 0.2s;
+    }
+    .controls .on {
+      color: #00ffc1;
+      font-weight: bold;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(10, 34px);
+      grid-template-rows: repeat(10, 34px);
+      gap: 3px;
+      background: #15152c;
+      padding: 13px;
+      border-radius: 17px;
+      box-shadow: 0 6px 40px #0006;
+      user-select: none;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .cell {
+      background: linear-gradient(120deg, #2e3468 70%, #1e1d3a 100%);
+      border: none;
+      outline: none;
+      border-radius: 8px;
+      width: 34px;
+      height: 34px;
+      font-size: 1.15em;
+      color: #c8cfff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 5px #0002;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.22s, box-shadow 0.35s, filter 0.2s;
+      will-change: background, box-shadow, transform;
+    }
+    .cell.opened {
+      background: #232349;
+      color: #333;
+      animation: popOpen 0.5s cubic-bezier(.34,1.56,.64,1) both;
+      box-shadow: 0 0 0 #0000;
+      cursor: default;
+      z-index: 1;
+    }
+    @keyframes popOpen {
+      0% { transform: scale(1.22);}
+      70% { filter: brightness(1.4);}
+      100% { transform: scale(1); filter: brightness(1);}
+    }
+    .cell.opened.bonus {
+      box-shadow: 0 0 18px 4px #ffd700a0;
+      animation: popBonusCell 0.7s;
+    }
+    @keyframes popBonusCell {
+      0% {box-shadow: 0 0 0 0 #ffd700a0;}
+      70% {box-shadow: 0 0 24px 10px #ffd700d0;}
+      100% {box-shadow: 0 0 0 0 #ffd70000;}
+    }
+    .cell.bomb {
+      background: radial-gradient(circle, #ff3535 70%, #b90202 100%);
+      animation: shake 0.45s;
+      color: #fff;
+      z-index: 2;
+    }
+    @keyframes shake {
+      0% { transform: scale(1.2) rotate(-9deg);}
+      30% { transform: scale(0.89) rotate(11deg);}
+      60% { transform: scale(1.07) rotate(-7deg);}
+      100% { transform: scale(1) rotate(0);}
+    }
+    .cell.flag {
+      color: #ffe200;
+      animation: flagPop 0.32s;
+      text-shadow: 0 0 8px #ffe200, 0 0 16px #ffd70080;
+      filter: drop-shadow(0 0 4px #ffd700cc);
+    }
+    @keyframes flagPop {
+      0% { transform: scale(0.7) rotate(-15deg);}
+      80% { transform: scale(1.18) rotate(8deg);}
+      100% { transform: scale(1) rotate(0);}
+    }
+    .cell .explosion {
+      position: absolute;
+      left: 0; top: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      border-radius: 7px;
+      background: radial-gradient(circle, #fff7 10%, #ff3535cc 60%, #b9020200 100%);
+      animation: explosion 0.7s linear both;
+      opacity: 1;
+      z-index: 2;
+    }
+    @keyframes explosion {
+      0% { opacity: 0.93; }
+      70% { opacity: 1;}
+      100% { opacity: 0;}
+    }
+    .cell .particles {
+      position: absolute;
+      left: 0; top: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .particle {
+      position: absolute;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.9;
+      animation: particleExplode 0.7s linear forwards;
+    }
+    @keyframes particleExplode {
+      0% { opacity: 1; transform: scale(0.3);}
+      80% { opacity: 0.6;}
+      100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(1.3);}
+    }
+    .cell span {
+      font-weight: bold;
+      font-size: 1.05em;
+      filter: drop-shadow(0 1px 3px #0009);
+    }
+    .cell.opened[data-n="1"] span { color: #42a5f5;}
+    .cell.opened[data-n="2"] span { color: #66bb6a;}
+    .cell.opened[data-n="3"] span { color: #ef5350;}
+    .cell.opened[data-n="4"] span { color: #8e24aa;}
+    .cell.opened[data-n="5"] span { color: #ff9800;}
+    .cell.opened[data-n="6"] span { color: #00bcd4;}
+    .cell.opened[data-n="7"] span { color: #fbc02d;}
+    .cell.opened[data-n="8"] span { color: #bdbdbd;}
+    .restart-btn {
+      margin-top: 18px;
+      background: linear-gradient(90deg,#ff6b00,#ffd700 80%);
+      color: #1a1a23;
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 10px 32px;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 2px 14px #0002;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s, color 0.2s;
+      z-index: 2;
+    }
+    .restart-btn:hover {
+      background: linear-gradient(90deg,#ffd700,#ff6b00 80%);
+      color: #2e2e32;
+    }
+    .game-over-modal {
+      position: fixed;
+      left: 0; top: 0; right: 0; bottom: 0;
+      background: rgba(25,25,40,0.88);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.5s;
+      flex-direction: column;
+      font-size: 1.4em;
+    }
+    @keyframes fadeIn { 0% { opacity: 0;} 100% { opacity: 1;} }
+    .game-over-content {
+      background: #23233a;
+      border-radius: 20px;
+      box-shadow: 0 6px 40px #0006;
+      padding: 40px 50px;
+      text-align: center;
+      color: #ffd700;
+      animation: popOpen 0.4s;
+      min-width: 290px;
+      position: relative;
+      overflow: visible;
+    }
+    .winner {
+      font-size: 1.35em;
+      color: #ff6b00;
+      margin-bottom: 12px;
+      font-weight: bold;
+      text-shadow: 0 1px 8px #222;
+      animation: winGlow 2.5s infinite;
+    }
+    @keyframes winGlow {
+      0% {text-shadow: 0 0 8px #fff, 0 0 22px #ffd700;}
+      50% {text-shadow: 0 0 18px #fff, 0 0 44px #ff6b00;}
+      100% {text-shadow: 0 0 8px #fff, 0 0 22px #ffd700;}
+    }
+    .draw {
+      color: #61dafb;
+      font-weight: bold;
+      font-size: 1.15em;
+    }
+    .confetti {
+      pointer-events: none;
+      position: fixed;
+      left: 0; top: 0; width: 100vw; height: 100vh;
+      z-index: 111;
+      overflow: visible;
+      pointer-events: none;
+    }
+    .confetto {
+      position: absolute;
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      opacity: 0.88;
+      will-change: transform;
+      animation: confettiFall 2.3s linear forwards;
+    }
+    @keyframes confettiFall {
+      0% {transform: translateY(-40px) rotate(0);}
+      80% {opacity: 0.95;}
+      100% {transform: translateY(100vh) rotate(380deg); opacity: 0;}
+    }
+    .bonus-message {
+      position: absolute;
+      left: 50%; top: -36px;
+      transform: translateX(-50%);
+      font-size: 1.13em;
+      font-weight: bold;
+      color: #ffea00;
+      background: #ff6b0090;
+      padding: 5px 18px;
+      border-radius: 15px;
+      box-shadow: 0 4px 18px #ffd70080;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 10;
+      animation: popBonus 1.5s;
+    }
+    @keyframes popBonus {
+      0% {opacity: 0; transform: translateX(-50%) scale(0.7);}
+      12% {opacity: 1; transform: translateX(-50%) scale(1.15);}
+      80% {opacity: 1;}
+      100% {opacity: 0; transform: translateX(-50%) scale(0.7);}
+    }
+    .mechanics-explain {
+      color:#ffd700;
+      background:#282c42;
+      margin-bottom:10px;
+      padding:10px 18px;
+      border-radius:10px;
+      font-size:1.05em;
+      box-shadow:0 1px 10px #0001;
+      max-width:600px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Campo Minado Multiplayer</h1>
+  <div id="setup">
+    <form id="setupForm">
+      <label for="playerCount">Jogadores:</label>
+      <input type="number" id="playerCount" name="playerCount" min="1" max="6" value="2" required>
+      <span id="playerNames"></span>
+      <label for="boardSize">Tamanho:</label>
+      <select id="boardSize">
+        <option value="10">10x10</option>
+        <option value="12">12x12</option>
+        <option value="14">14x14</option>
+      </select>
+      <label for="mineCount">Bombas:</label>
+      <input type="number" id="mineCount" min="5" max="80" value="15">
+      <button type="submit">Iniciar Jogo</button>
+    </form>
+  </div>
+  <div class="mechanics-explain">
+    Mecânicas novas: Itens extras, combos, pontuação, bônus, poderes especiais (ver célula, inverter turno, +1 vida, teleportar), e modo multiplayer!<br>
+    Cada jogador tem <b>🛡️ desarmar bomba</b> (use a caixa abaixo antes de clicar para ativar), e pode usar <b>poder especial</b> a cada 5 turnos.<br>
+    Encontre itens escondidos, ative combos abrindo células rápidas, e ganhe bônus únicos!
+  </div>
+  <div class="scoreboard" id="scoreboard"></div>
+  <div class="controls" id="controls"></div>
+  <div class="mines" id="minesDiv" style="display:none;">💣 Bombas: <span id="minesCount"></span></div>
+  <div id="board"></div>
+  <button class="restart-btn" id="restartBtn" style="display:none;" onclick="restartGame()">Reiniciar</button>
+  <div id="gameOverModal" class="game-over-modal" style="display: none;">
+    <div class="game-over-content">
+      <div id="winnerText"></div>
+      <button class="restart-btn" onclick="restartGame()">Jogar de Novo</button>
+    </div>
+  </div>
+  <div class="confetti" id="confetti"></div>
+<script>
+/* === CONFIGS === */
+let size = 10;
+let numMines = 15;
+let numPlayers = 2;
+let playerNames = [];
+const maxPlayers = 6;
+let board = [], revealed = [], flagged = [], itemCell = [], powerCell = [];
+let currentPlayer = 1;
+let scores = [], items = [], lives = [], powers = [];
+let minesLeft = numMines;
+let gameOver = false;
+let cellsOpened = 0;
+let comboCount = 0;
+let comboActive = false;
+let comboTimer = null;
+let allFlaggedBonusGiven = [];
+let powerUsed = [];
+let turnNumber = 0;
+let lastOpen = [];
+let teleportTarget = null;
+
+const powerList = [
+  { name:"Ver Célula", desc:"Veja se uma célula é bomba sem abrir.", emoji:"🔍", use: powerView },
+  { name:"Inverter Turno", desc:"Jogue novamente.", emoji:"♻️", use: powerRepeat },
+  { name:"+1 Vida", desc:"Se explodir bomba, sobrevive uma vez.", emoji:"💖", use: powerLife },
+  { name:"Teleportar", desc:"Troque uma célula aberta com uma fechada.", emoji:"🌀", use: powerTeleport }
+];
+
+/* === SETUP === */
+function updatePlayerInputs() {
+  const n = Number(document.getElementById('playerCount').value);
+  let html = '';
+  for(let i=1; i<=n; ++i) {
+    html += ` <input type="text" id="pname${i}" class="pn" placeholder="Nome${i}" value="Jogador ${i}" style="width:90px">`;
+  }
+  document.getElementById('playerNames').innerHTML = html;
+}
+document.getElementById('playerCount').addEventListener('input', updatePlayerInputs);
+updatePlayerInputs();
+
+document.getElementById('setupForm').onsubmit = function(e){
+  e.preventDefault();
+  numPlayers = Math.max(1, Math.min(maxPlayers, Number(document.getElementById('playerCount').value)));
+  size = Number(document.getElementById('boardSize').value);
+  numMines = Math.max(5, Math.min(size*size-5, Number(document.getElementById('mineCount').value)));
+  playerNames = [];
+  for(let i=1; i<=numPlayers; ++i) {
+    let name = document.getElementById('pname'+i).value || `Jogador ${i}`;
+    playerNames.push(name);
+  }
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('minesDiv').style.display = '';
+  document.getElementById('restartBtn').style.display = '';
+  startGame();
+};
+
+/* === GAME CORE === */
+function startGame() {
+  board = Array.from({length: size}, () => Array(size).fill(0));
+  revealed = Array.from({length: size}, () => Array(size).fill(false));
+  flagged = Array.from({length: size}, () => Array(size).fill(false));
+  itemCell = Array.from({length: size}, () => Array(size).fill(false));
+  powerCell = Array.from({length: size}, () => Array(size).fill(false));
+  minesLeft = numMines;
+  cellsOpened = 0;
+  scores = Array(numPlayers).fill(0);
+  items = Array(numPlayers).fill(3);
+  lives = Array(numPlayers).fill(1);
+  powers = Array(numPlayers).fill(0);
+  powerUsed = Array(numPlayers).fill(false);
+  allFlaggedBonusGiven = Array(numPlayers).fill(false);
+  turnNumber = 0;
+  lastOpen = [];
+  teleportTarget = null;
+
+  // Place bombs
+  let cells = [];
+  for (let i=0; i<size*size; ++i) cells.push(i);
+  shuffle(cells);
+  for (let i=0; i<numMines; ++i) {
+    let idx = cells[i];
+    let r = Math.floor(idx/size), c = idx%size;
+    board[r][c] = 'B';
+  }
+  // Fill numbers
+  for (let r=0; r<size; ++r) {
+    for (let c=0; c<size; ++c) {
+      if (board[r][c] === 'B') continue;
+      let count = 0;
+      for (let dr=-1; dr<=1; ++dr) for (let dc=-1; dc<=1; ++dc) {
+        let nr = r+dr, nc = c+dc;
+        if (nr>=0 && nr<size && nc>=0 && nc<size && board[nr][nc]==='B') count++;
+      }
+      board[r][c] = count;
+    }
+  }
+  // Itens e poderes escondidos
+  let safeCells = [];
+  for(let r=0;r<size;++r) for(let c=0;c<size;++c) if(board[r][c]!=='B') safeCells.push([r,c]);
+  shuffle(safeCells);
+  for(let i=0;i<Math.floor(size);++i){
+    let [r,c] = safeCells[i];
+    itemCell[r][c] = true;
+  }
+  for(let i=Math.floor(size);i<Math.floor(size*1.5);++i){
+    let [r,c] = safeCells[i];
+    powerCell[r][c] = true;
+  }
+  currentPlayer = 1;
+  renderScoreboard();
+  renderControls();
+  renderBoard();
+  updatePlayersUI();
+  document.getElementById('minesCount').textContent = numMines;
+  gameOver = false;
+}
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+/* === RENDER === */
+function renderScoreboard() {
+  let sb = '';
+  for(let i=1;i<=numPlayers;++i) {
+    sb += `<div class="player" id="p${i}">
+      <span>${playerNames[i-1]||'J'+i}</span>
+      <span style="margin-left:5px;">${i===currentPlayer?'●':''}</span>
+      <span> Pts:<b id="score${i}">${scores[i-1]}</b></span>
+      <span class="item"><span class="icon">🛡️</span><span id="item${i}">${items[i-1]}</span></span>
+      <span class="item"><span class="icon">💖</span><span id="life${i}">${lives[i-1]}</span></span>
+      <span class="item"><span class="icon">✨</span><span id="power${i}">${powers[i-1]}</span></span>
+    </div>`;
+  }
+  document.getElementById('scoreboard').innerHTML = sb;
+}
+function renderControls() {
+  let ctrl = '';
+  for(let i=1;i<=numPlayers;++i) {
+    ctrl += `<span id="ctrl${i}" style="display:${(i===currentPlayer)?'':'none'}">
+      <input type="checkbox" id="desarm${i}">
+      <label for="desarm${i}">Desarmar bomba</label> 
+      <button onclick="activatePower()" style="margin-left:12px;${powers[i-1]>0?'':'opacity:.5;pointer-events:none;'}">Usar poder especial</button>
+    </span>`;
+  }
+  document.getElementById('controls').innerHTML = ctrl;
+}
+function renderBoard() {
+  const boardDiv = document.getElementById('board');
+  boardDiv.style.gridTemplateColumns = `repeat(${size}, 34px)`;
+  boardDiv.style.gridTemplateRows = `repeat(${size}, 34px)`;
+  boardDiv.innerHTML = '';
+  for (let r=0; r<size; ++r) {
+    for (let c=0; c<size; ++c) {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.dataset.r = r;
+      btn.dataset.c = c;
+      if (revealed[r][c]) {
+        btn.classList.add('opened');
+        if (board[r][c] === 'B') {
+          btn.classList.add('bomb');
+          btn.innerHTML = '<span>💣</span>';
+        } else if (board[r][c]>0) {
+          btn.setAttribute('data-n', board[r][c]);
+          btn.innerHTML = `<span>${board[r][c]}</span>`;
+        } else if (itemCell[r][c]) {
+          btn.innerHTML = `<span style="font-size:1.5em; color:#00ffc1;">🛡️</span>`;
+        } else if (powerCell[r][c]) {
+          btn.innerHTML = `<span style="font-size:1.3em; color:#ffd700;">✨</span>`;
+        }
+      } else if (flagged[r][c]) {
+        btn.classList.add('flag');
+        btn.innerHTML = '<span>🚩</span>';
+      }
+      btn.addEventListener('click', handleCellClick);
+      btn.addEventListener('contextmenu', handleCellFlag);
+      boardDiv.appendChild(btn);
+    }
+  }
+}
+
+/* === GAMEPLAY === */
+function handleCellClick(e) {
+  if (gameOver) return;
+  const r = +this.dataset.r, c = +this.dataset.c;
+  if (revealed[r][c] || flagged[r][c]) return;
+  // Checa opção de desarmar bomba
+  const useItem = document.getElementById('desarm'+currentPlayer).checked;
+  openCell(r, c, useItem);
+  // limpa opção
+  document.getElementById('desarm'+currentPlayer).checked = false;
+}
+function handleCellFlag(e) {
+  e.preventDefault();
+  if (gameOver) return;
+  const r = +this.dataset.r, c = +this.dataset.c;
+  if (revealed[r][c]) return;
+  flagged[r][c] = !flagged[r][c];
+  document.getElementById('minesCount').textContent = numMines - countFlags();
+  renderBoard();
+  checkAllBombsFlaggedBonus();
+}
+function countFlags() {
+  let total = 0;
+  for (let r=0; r<size; ++r) for (let c=0; c<size; ++c) if (flagged[r][c]) total++;
+  return total;
+}
+
+function openCell(r, c, useItem, teleporting=false) {
+  if (revealed[r][c] || flagged[r][c]) return;
+  revealed[r][c] = true;
+  cellsOpened++;
+  lastOpen.push([r,c]);
+  const cellBtn = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  cellBtn && cellBtn.classList.add('opened');
+  // Itens e poderes
+  if (itemCell[r][c]) {
+    items[currentPlayer-1]++;
+    updateItems();
+    showBonus("Item encontrado! +1 🛡️", "#00ffc1");
+    cellBtn.innerHTML = `<span style="font-size:1.5em; color:#00ffc1;">🛡️</span>`;
+    setTimeout(()=>{cellBtn.innerHTML = '';},900);
+  }
+  if (powerCell[r][c]) {
+    powers[currentPlayer-1]++;
+    updatePowers();
+    showBonus("Poder especial! +1 ✨", "#ffd700");
+    cellBtn.innerHTML = `<span style="font-size:1.3em; color:#ffd700;">✨</span>`;
+    setTimeout(()=>{cellBtn.innerHTML = '';},900);
+  }
+  if (board[r][c] === 'B') {
+    if (useItem && items[currentPlayer-1]>0) {
+      // Desarma bomba
+      items[currentPlayer-1]--;
+      scores[currentPlayer-1] += 2;
+      updateScore();
+      updateItems();
+      showParticles(cellBtn, ['#00ffc1','#ffd700','#fff','#42a5f5']);
+      showBonus(`BOMBA DESARMADA! +2 pts`, "#00ffc1");
+      cellBtn.innerHTML = `<span style="font-size:1.2em; color:#00ffc1;">🛡️💣</span>`;
+      setTimeout(()=>{cellBtn.innerHTML = '<span>💣</span>';},800);
+      // segue jogo
+    } else {
+      // Explodiu bomba, checa vida extra
+      if(lives[currentPlayer-1]>0) {
+        lives[currentPlayer-1]--;
+        updateLives();
+        showBonus(`Perdeu 1 vida!`, "#ff3535");
+        showExplosion(cellBtn);
+        cellBtn.classList.add('bomb');
+        cellBtn.innerHTML = '<span>💣</span>';
+        renderBoard();
+      } else {
+        scores[currentPlayer-1]--;
+        updateScore();
+        showExplosion(cellBtn);
+        cellBtn.classList.add('bomb');
+        cellBtn.innerHTML = '<span>💣</span>';
+        endGame(determineWinner(), true);
+        return;
+      }
+    }
+  } else {
+    scores[currentPlayer-1]++;
+    updateScore();
+    showParticles(cellBtn, ['#ffd700','#fff','#ff6b00','#42a5f5']);
+    // Combo
+    if (board[r][c] === 0) {
+      handleCombo();
+      for (let dr=-1; dr<=1; ++dr) for (let dc=-1; dc<=1; ++dc) {
+        let nr = r+dr, nc = c+dc;
+        if (nr>=0 && nr<size && nc>=0 && nc<size && !revealed[nr][nc]) openCell(nr, nc, false);
+      }
+    } else {
+      resetCombo();
+    }
+    if (checkWin()) {
+      endGame(determineWinner(), false);
+      return;
+    }
+  }
+  renderBoard();
+  // Teleport termina turno, repeat/inverter não
+  if(!teleporting) nextPlayer();
+}
+function nextPlayer() {
+  turnNumber++;
+  currentPlayer = (currentPlayer%numPlayers)+1;
+  renderScoreboard();
+  renderControls();
+  updatePlayersUI();
+}
+function updatePlayersUI() {
+  for(let i=1;i<=numPlayers;++i){
+    document.getElementById('p'+i).classList.toggle('active-player',currentPlayer===i);
+    document.getElementById('ctrl'+i) && (document.getElementById('ctrl'+i).style.display = (i===currentPlayer)?'':'none');
+  }
+}
+function updateScore() {
+  for(let i=1;i<=numPlayers;++i)
+    document.getElementById('score'+i).textContent = scores[i-1];
+}
+function updateItems() {
+  for(let i=1;i<=numPlayers;++i)
+    document.getElementById('item'+i).textContent = items[i-1];
+}
+function updateLives() {
+  for(let i=1;i<=numPlayers;++i)
+    document.getElementById('life'+i).textContent = lives[i-1];
+}
+function updatePowers() {
+  for(let i=1;i<=numPlayers;++i)
+    document.getElementById('power'+i).textContent = powers[i-1];
+}
+
+/* === SPECIAL POWERS === */
+function activatePower() {
+  if(gameOver) return;
+  let pid = currentPlayer-1;
+  if(powers[pid]<=0) return;
+  let options = powerList.map((p,i)=>`${p.emoji} ${p.name}`).join(' | ');
+  let sel = prompt(`Escolha seu poder especial:\n${powerList.map((p,i)=>`${i+1}- ${p.emoji} ${p.name}: ${p.desc}`).join('\n')}`);
+  let idx = Number(sel)-1;
+  if(isNaN(idx)||idx<0||idx>=powerList.length) {
+    alert("Poder cancelado.");
+    return;
+  }
+  powers[pid]--;
+  updatePowers();
+  powerList[idx].use();
+}
+function powerView() {
+  // Veja se uma célula é bomba sem abrir
+  let pos = prompt("Digite a posição: linha,coluna (ex: 3,4)");
+  if(!pos) return;
+  let [r,c] = pos.split(',').map(x=>Number(x)-1);
+  if(isNaN(r)||isNaN(c)||r<0||r>=size||c<0||c>=size) { alert("Posição inválida!"); return;}
+  alert(board[r][c]==='B'? "💣 Tem bomba!" : "✅ Livre");
+}
+function powerRepeat() {
+  // Jogue novamente (não avança turno)
+  showBonus("Jogue novamente!", "#ffd700");
+  // Não faz nada, apenas não avança o turno no próximo openCell
+  currentPlayer = (currentPlayer-2+numPlayers)%numPlayers+1;
+}
+function powerLife() {
+  // +1 vida para o jogador atual
+  lives[currentPlayer-1]++;
+  updateLives();
+  showBonus("Você ganhou +1 vida!", "#ff69b4");
+}
+function powerTeleport() {
+  // Trocar célula aberta com uma fechada
+  let from = prompt("Digite linha,coluna da célula aberta para mover (ex: 2,3)");
+  let to = prompt("Digite linha,coluna da célula fechada (ex: 5,1)");
+  if(!from||!to) return;
+  let [r1,c1]=from.split(',').map(x=>Number(x)-1), [r2,c2]=to.split(',').map(x=>Number(x)-1);
+  if(isNaN(r1)||isNaN(c1)||isNaN(r2)||isNaN(c2)||r1<0||r1>=size||c1<0||c1>=size||r2<0||r2>=size||c2<0||c2>=size) {alert("Posição inválida!");return;}
+  if(!revealed[r1][c1]||revealed[r2][c2]){alert("Posição inválida!");return;}
+  let tmp = board[r1][c1]; board[r1][c1]=board[r2][c2]; board[r2][c2]=tmp;
+  showBonus("Células trocadas! 🌀", "#00ffc1");
+  renderBoard();
+  // Avança turno
+}
+
+/* === BÔNUS === */
+function showParticles(cell, colors) {
+  const n = 10 + Math.floor(Math.random()*4);
+  let cont = document.createElement('div');
+  cont.className = 'particles';
+  for (let i=0; i<n; ++i) {
+    let p = document.createElement('div');
+    p.className = 'particle';
+    p.style.background = colors[Math.floor(Math.random()*colors.length)];
+    let angle = 2*Math.PI*i/n + (Math.random()-0.5)*0.5;
+    let dist = 22+Math.random()*14;
+    p.style.setProperty('--dx', Math.cos(angle)*dist+'px');
+    p.style.setProperty('--dy', Math.sin(angle)*dist+'px');
+    cont.appendChild(p);
+  }
+  cell.appendChild(cont);
+  setTimeout(()=>cont.remove(), 700);
+}
+function handleCombo() {
+  comboCount++;
+  comboActive = true;
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(resetCombo, 1600);
+  if (comboCount === 5) {
+    scores[currentPlayer-1] += 5;
+    updateScore();
+    showBonus("BÔNUS COMBO! +5 pts", "#ffea00");
+    let openedCells = document.querySelectorAll('.cell.opened');
+    if (openedCells.length) {
+      let last = openedCells[openedCells.length-1];
+      last.classList.add('bonus');
+      setTimeout(()=>last.classList.remove('bonus'),1000);
+    }
+  }
+}
+function resetCombo() {
+  comboCount = 0;
+  comboActive = false;
+  hideBonus();
+}
+function showBonus(msg, color) {
+  let bonus = document.getElementById('bonusMsg');
+  bonus.textContent = msg;
+  bonus.style.color = color || "#ffd700";
+  bonus.style.opacity = "1";
+  bonus.style.animation = "popBonus 1.5s";
+  setTimeout(hideBonus, 1450);
+}
+function hideBonus() {
+  let bonus = document.getElementById('bonusMsg');
+  bonus.style.opacity = "0";
+  bonus.textContent = "";
+  bonus.style.animation = "";
+}
+function checkAllBombsFlaggedBonus() {
+  for(let player=0;player<numPlayers;++player){
+    if (allFlaggedBonusGiven[player]) continue;
+    let correct = 0, totalFlags = 0;
+    for (let r=0; r<size; ++r) for (let c=0; c<size; ++c) {
+      if (flagged[r][c]) {
+        totalFlags++;
+        if (board[r][c] === 'B') correct++;
+      }
+    }
+    if (correct === numMines && totalFlags === numMines) {
+      allFlaggedBonusGiven[player] = true;
+      scores[player] += 10;
+      updateScore();
+      showBonus(`${playerNames[player]||'Jogador '+(player+1)}: BÔNUS todas bombas sinalizadas! +10`, "#00ffc1");
+      for (let r=0; r<size; ++r) for (let c=0; c<size; ++c) {
+        if (flagged[r][c]) {
+          let cellBtn = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+          if (cellBtn) {
+            cellBtn.animate([{filter:"brightness(1.6)"},{filter:"brightness(1)"}], {duration:1200});
+          }
+        }
+      }
+    }
+  }
+}
+
+/* === FIM DE JOGO === */
+function checkWin() {
+  return (size*size - numMines) === cellsOpened;
+}
+function determineWinner() {
+  let max = Math.max(...scores);
+  let winners = [];
+  for(let i=0;i<numPlayers;++i) if(scores[i]===max) winners.push(i+1);
+  return winners.length===1?winners[0]:0;
+}
+function endGame(winner, exploded) {
+  gameOver = true;
+  for (let r=0; r<size; ++r) for (let c=0; c<size; ++c) if (board[r][c]==='B') revealed[r][c]=true;
+  renderBoard();
+  showGameOver(winner, exploded);
+  if (winner && !exploded) launchConfetti();
+}
+function showExplosion(cell) {
+  const expl = document.createElement('div');
+  expl.className = 'explosion';
+  cell.appendChild(expl);
+  setTimeout(()=>expl.remove(), 700);
+}
+function showGameOver(winner, exploded) {
+  const modal = document.getElementById('gameOverModal');
+  const winnerText = document.getElementById('winnerText');
+  if (exploded && winner) {
+    winnerText.innerHTML = `<div class="winner">💥 Bomba explodiu!</div>
+      <div>Vitória de <b>${playerNames[winner-1]||('Jogador '+winner)}</b>!</div>
+      <div>Pontuação: <span style="color:#ff6b00">${scores[winner-1]}</span></div>`;
+  } else if (winner === 0) {
+    winnerText.innerHTML = `<div class="draw">Empate! Todos pontuaram igual.</div>`;
+  } else {
+    winnerText.innerHTML = `<div class="winner">🏆 Vitória de ${playerNames[winner-1]||('Jogador '+winner)}!</div>
+      <div>Pontuação: <span style="color:#ff6b00">${scores[winner-1]}</span></div>`;
+  }
+  modal.style.display = 'flex';
+}
+function restartGame() {
+  document.getElementById('gameOverModal').style.display = 'none';
+  document.getElementById('setup').style.display = '';
+  document.getElementById('minesDiv').style.display = 'none';
+  document.getElementById('restartBtn').style.display = 'none';
+  document.getElementById('scoreboard').innerHTML = '';
+  document.getElementById('controls').innerHTML = '';
+  document.getElementById('board').innerHTML = '';
+  document.getElementById('confetti').innerHTML = '';
+}
+function launchConfetti() {
+  const colors = ['#ffd700','#ff6b00','#00ffc1','#42a5f5','#fff','#ef5350','#ff9800','#8e24aa'];
+  let confetti = document.getElementById('confetti');
+  for(let i=0;i<38;++i){
+    let c = document.createElement('div');
+    c.className = 'confetto';
+    c.style.left = Math.random()*97+'vw';
+    c.style.top = (-42-Math.random()*40)+'px';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.transform = `rotate(${Math.random()*360}deg)`;
+    c.style.animationDuration = (2.1+Math.random()*1.2)+'s';
+    confetti.appendChild(c);
+    setTimeout(()=>c.remove(), 2500);
+  }
+}
+function clearConfetti() {
+  document.getElementById('confetti').innerHTML = '';
+}
+</script>
+</body>
+</html>
